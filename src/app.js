@@ -16,6 +16,7 @@ import paymentRoutes from "./routes/payment.routes.js";
 import midtransRoutes from "./routes/midtrans.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import { generalLimiter } from "./middlewares/rateLimit.middleware.js";
+import healthRoutes from "./routes/health.routes.js";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/payments", paymentRoutes);
 app.use("/midtrans", midtransRoutes);
 app.use("/upload", uploadRoutes);
 app.use(generalLimiter);
+app.use("/health", healthRoutes);
 
 // 404 handler
 app.use((req, res) => {
