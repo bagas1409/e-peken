@@ -1,529 +1,316 @@
-# 📕 DOKUMENTASI API + PANDUAN POSTMAN
+📘 DOKUMENTASI API
+E-Peken Mart (Marketplace UMKM)
+🧠 ARSITEKTUR SISTEM
+Frontend (Web / Mobile)
+↓
+Cloudflare Tunnel (HTTPS Public URL)
+↓
+Backend Express (Local)
+↓
+PostgreSQL (Local)
+↓
+Supabase Storage (Images)
+↓
+Midtrans Sandbox (Payment)
 
-## Marketplace UMKM Multi-Vendor
+🌍 BASE URL
 
----
+Gunakan URL dari Cloudflare Tunnel:
 
-# 🧭 KONVENSI UMUM (WAJIB DIBACA)
+https://xxxx.trycloudflare.com
 
-## Base URL
+Contoh:
 
-```
-http://localhost:4000
-```
+BASE_URL = https://xxxx.trycloudflare.com
 
-## Authorization
+🔐 AUTHENTICATION
 
-Semua endpoint protected pakai:
+Menggunakan JWT (Bearer Token)
 
-```
-Authorization: Bearer <JWT_TOKEN>
-```
+Token dikirim lewat header:
 
-Di **Postman**:
+Authorization: Bearer <access_token>
 
-- Tab **Authorization**
-- Type: `Bearer Token`
-- Token: paste JWT
+1️⃣ AUTH API
+🔹 Register User
 
----
+POST /auth/register
 
-# 0️⃣ PERSIAPAN POSTMAN (WAJIB)
-
-### Buat Environment
-
-Nama: `Marketplace Local`
-
-Variable:
-
-| Key         | Value                                          |
-| ----------- | ---------------------------------------------- |
-| base_url    | [http://localhost:4000](http://localhost:4000) |
-| token_user  | (kosong dulu)                                  |
-| token_umkm  | (kosong dulu)                                  |
-| token_admin | (kosong dulu)                                  |
-
-👉 Supaya tinggal pakai:
-
-```
-{{base_url}}/auth/login
-```
-
----
-
-# 🔐 AUTH FLOW (USER / UMKM / ADMIN)
-
----
-
-## 1️⃣ REGISTER USER / UMKM / ADMIN
-
-### Endpoint
-
-**POST** `{{base_url}}/auth/register`
-
-### Postman Tab
-
-- **Method**: POST
-- **Body** → raw → JSON
-
-### Body Contoh USER
-
-```json
+Body (JSON)
 {
-  "name": "User Test",
-  "email": "user@test.com",
-  "password": "123456",
-  "role": "USER"
+"name": "Admin",
+"email": "admin@mail.com",
+"password": "123456",
+"role": "ADMIN"
 }
-```
 
-### Body Contoh UMKM
+Role tersedia
+USER | UMKM | ADMIN
 
-```json
+Response
 {
-  "name": "UMKM Test",
-  "email": "umkm@test.com",
-  "password": "123456",
-  "role": "UMKM"
+"message": "Register berhasil",
+"userId": 1,
+"role": "ADMIN"
 }
-```
 
-### Body Contoh ADMIN
+🔹 Login
 
-```json
+POST /auth/login
+
+Body
 {
-  "name": "Admin Test",
-  "email": "admin@test.com",
-  "password": "123456",
-  "role": "ADMIN"
+"email": "admin@mail.com",
+"password": "123456"
 }
-```
 
-### Expected Response
-
-```json
+Response
 {
-  "message": "Register berhasil"
+"token": "JWT_TOKEN",
+"user": {
+"id": 1,
+"name": "Admin",
+"email": "admin@mail.com",
+"role": "ADMIN"
 }
-```
+}
 
----
+🔹 Get My Profile
 
-## 2️⃣ LOGIN (DAPAT TOKEN)
+GET /me
 
-### Endpoint
+Headers
+Authorization: Bearer JWT_TOKEN
 
-**POST** `{{base_url}}/auth/login`
+2️⃣ UMKM (SELLER)
+🔹 Create / Update Profil UMKM (Onboarding)
 
-### Body
+POST /umkm/profile
 
-```json
+Headers
+Authorization: Bearer JWT_TOKEN (role UMKM)
+
+Body
 {
-  "email": "user@test.com",
-  "password": "123456"
+"storeName": "Toko Makmur",
+"slug": "toko-makmur",
+"description": "Menjual produk lokal",
+"address": "Bandung"
 }
-```
 
-### Response
+🔹 Upload Logo UMKM
 
-```json
+POST /upload/umkm/logo
+
+Headers
+Authorization: Bearer JWT_TOKEN
+Content-Type: multipart/form-data
+
+Form Data
+file: (image.png)
+
+Response
 {
-  "token": "eyJhbGciOiJIUzI1NiIs..."
+"message": "Upload berhasil",
+"imageUrl": "https://xxxx.supabase.co/storage/..."
 }
-```
 
----
+🔹 Upload Banner UMKM
 
-### 🔥 SIMPAN TOKEN KE ENV (POSTMAN)
-
-Di tab **Tests**:
-
-```js
-pm.environment.set("token_user", pm.response.json().token);
-```
-
-Untuk UMKM / ADMIN ganti:
-
-- `token_umkm`
-- `token_admin`
-
----
-
-## 3️⃣ GET PROFILE (CEK TOKEN)
-
-### Endpoint
-
-**GET** `{{base_url}}/me`
-
-### Authorization
-
-- Bearer Token → `{{token_user}}`
-
-### Response
-
-```json
-{
-  "id": 1,
-  "email": "user@test.com",
-  "roles": ["USER"]
-}
-```
-
----
-
-# 🏪 FLOW UMKM (ONBOARDING)
-
----
-
-## 4️⃣ BUAT PROFIL UMKM (WAJIB SEBELUM JUALAN)
-
-### Endpoint
-
-**POST** `{{base_url}}/umkm/profile`
-
-### Authorization
-
-Bearer Token → `{{token_umkm}}`
-
-### Body
-
-```json
-{
-  "storeName": "Toko Bagas",
-  "slug": "toko-bagas",
-  "description": "UMKM lokal",
-  "address": "Bandung",
-  "openTime": "08:00",
-  "closeTime": "17:00"
-}
-```
-
-### Response
-
-```json
-{
-  "message": "Profil UMKM berhasil dibuat, menunggu verifikasi admin"
-}
-```
-
-📌 **STATUS = PENDING**
-❌ Belum bisa upload produk
-
----
-
-# 🛡️ FLOW ADMIN (APPROVE UMKM)
-
----
-
-## 5️⃣ ADMIN LIHAT UMKM PENDING
-
-### Endpoint
-
-**GET** `{{base_url}}/admin/umkm/pending`
-
-### Authorization
-
-Bearer Token → `{{token_admin}}`
-
-### Response
-
-```json
-[
-  {
-    "id": 1,
-    "storeName": "Toko Bagas",
-    "status": "PENDING"
-  }
-]
-```
-
----
-
-## 6️⃣ ADMIN APPROVE UMKM
-
-### Endpoint
-
-**PATCH** `{{base_url}}/admin/umkm/1/approve`
-
-### Authorization
-
-Bearer Token → `{{token_admin}}`
-
-### Response
-
-```json
-{
-  "message": "UMKM berhasil di-approve"
-}
-```
-
-📌 Setelah ini:
-
-- UMKM = ACTIVE
-- Wallet dibuat otomatis
-- Bisa upload produk
-
----
-
-# 🖼️ UPLOAD (SUPABASE STORAGE)
-
----
-
-## 7️⃣ UPLOAD LOGO UMKM
-
-### Endpoint
-
-**POST** `{{base_url}}/upload/umkm/logo`
-
-### Authorization
-
-Bearer Token → `{{token_umkm}}`
-
-### Body
-
-- **form-data**
-  | Key | Type | Value |
-  |---|---|---|
-  | image | File | pilih gambar |
-
-### Response
-
-```json
-{
-  "logoUrl": "https://supabase-url"
-}
-```
-
----
-
-## 8️⃣ UPLOAD BANNER UMKM
-
-SAMA seperti logo, endpoint:
-
-```
 POST /upload/umkm/banner
-```
 
----
+(sama seperti logo)
 
-## 9️⃣ UPLOAD GAMBAR PRODUK
+3️⃣ PRODUK (UMKM)
+🔹 Create Produk
 
-### Endpoint
+POST /products
 
-**POST** `{{base_url}}/upload/product-image`
+Headers
+Authorization: Bearer JWT_TOKEN (UMKM)
 
-### Authorization
-
-Bearer Token → `{{token_umkm}}`
-
-### Body
-
-- form-data
-  | image | File |
-
-### Response
-
-```json
+Body
 {
-  "imageUrl": "https://supabase-url"
+"name": "Keripik Singkong",
+"description": "Gurih dan renyah",
+"price": 15000,
+"stock": 20,
+"categoryId": 1
 }
-```
 
-⚠️ **CATAT URL INI**, dipakai saat create product
+🔹 Upload Gambar Produk
 
----
+POST /upload/product
 
-# 📦 PRODUK (UMKM)
+Headers
+Authorization: Bearer JWT_TOKEN
+Content-Type: multipart/form-data
 
----
+Form Data
+file: produk.jpg
+productId: 1
 
-## 🔟 CREATE PRODUCT
+🔹 Soft Delete Produk
 
-### Endpoint
+PATCH /products/:id/deactivate
 
-**POST** `{{base_url}}/products`
+4️⃣ PUBLIC API (TANPA LOGIN)
+🔹 List Produk
 
-### Authorization
+GET /public/products
 
-Bearer Token → `{{token_umkm}}`
+🔹 Detail Produk
 
-### Body
+GET /public/products/:id
 
-```json
+🔹 Profil UMKM + Produk
+
+GET /public/umkm/:slug
+
+5️⃣ CART & CHECKOUT
+🔹 Add to Cart
+
+POST /cart
+
+Headers
+Authorization: Bearer JWT_TOKEN
+
+Body
 {
-  "name": "Keripik Pisang",
-  "description": "Manis & renyah",
-  "price": 15000,
-  "stock": 20,
-  "categoryId": 1,
-  "imageUrl": "https://supabase-url"
+"productId": 1,
+"quantity": 2
 }
-```
 
-### Response
+🔹 Checkout
 
-```json
+POST /checkout
+
+Headers
+Authorization: Bearer JWT_TOKEN
+
+Body
 {
-  "message": "Produk berhasil dibuat"
+"paymentMethod": "MIDTRANS"
 }
-```
 
----
-
-## 1️⃣1️⃣ GET PRODUK UMKM SENDIRI
-
-**GET** `{{base_url}}/products/my`
-
-Authorization → `{{token_umkm}}`
-
----
-
-# 🌍 PUBLIC API (TANPA TOKEN)
-
----
-
-## 1️⃣2️⃣ LIST UMKM
-
-**GET** `{{base_url}}/public/umkm`
-
----
-
-## 1️⃣3️⃣ DETAIL UMKM
-
-**GET**
-
-```
-{{base_url}}/public/umkm/toko-bagas
-```
-
----
-
-## 1️⃣4️⃣ PRODUK UMKM
-
-```
-GET /public/umkm/toko-bagas/products
-```
-
----
-
-## 1️⃣5️⃣ DETAIL PRODUK
-
-```
-GET /public/products/1
-```
-
----
-
-# 🛒 CART & ORDER (USER)
-
----
-
-## 1️⃣6️⃣ ADD TO CART
-
-**POST** `/cart`
-
-Authorization → `{{token_user}}`
-
-```json
+Response
 {
-  "productId": 1,
-  "quantity": 2
+"snapUrl": "https://app.sandbox.midtrans.com/snap/..."
 }
-```
 
----
+6️⃣ MIDTRANS CALLBACK
+🔹 Callback URL (WAJIB)
 
-## 1️⃣7️⃣ CHECKOUT (MULTI UMKM)
+Set di Midtrans Dashboard:
 
-**POST** `/checkout`
+https://xxxx.trycloudflare.com/midtrans/callback
 
-Authorization → `{{token_user}}`
+🔹 Callback Endpoint
 
-Response:
+POST /midtrans/callback
 
-```json
-{
-  "orders": [{ "id": 101 }, { "id": 102 }]
-}
-```
+Flow
 
----
+Verifikasi signature
 
-# 🚚 ORDER STATUS
+Update:
 
----
+payments.status
 
-## 1️⃣8️⃣ UMKM KIRIM BARANG
+orders.payment_status
 
-**PATCH** `/orders/101/ship`
+wallet.balance_pending
 
-Authorization → `{{token_umkm}}`
+7️⃣ WALLET UMKM
+🔹 View Wallet
 
----
+GET /umkm/wallet
 
-## 1️⃣9️⃣ USER TERIMA BARANG
+🔹 Withdraw Request
 
-**PATCH** `/orders/101/complete`
+POST /umkm/withdraw
 
-Authorization → `{{token_user}}`
+8️⃣ ADMIN PANEL API
+🔹 List Users
 
----
+GET /admin/users
 
-# 💳 PAYMENT MIDTRANS DEMO
+🔹 Ban / Unban User
 
----
+PATCH /admin/users/:id/ban
+PATCH /admin/users/:id/unban
 
-## 2️⃣0️⃣ BUAT PAYMENT
+🔹 Approve UMKM
 
-**POST** `/payments/midtrans/101`
+PATCH /admin/umkm/:id/approve
 
-Authorization → `{{token_user}}`
+🔹 Admin Order Monitoring
 
-Response:
+GET /admin/orders
 
-```json
-{
-  "snapToken": "xxxxx"
-}
-```
+9️⃣ ORDER FLOW
+🔹 My Orders (User)
 
-Frontend:
+GET /orders/my
 
-```js
-window.snap.pay("xxxxx");
-```
+🔹 Ship Order (UMKM)
 
----
+PATCH /orders/:id/ship
 
-# 🚨 DISPUTE
+🔹 Complete Order (User)
 
----
+PATCH /orders/:id/complete
 
-## 2️⃣1️⃣ USER BUAT KOMPLAIN
+🔟 DISPUTE
+🔹 Create Dispute
 
-**POST** `/disputes`
+POST /disputes
 
-Authorization → `{{token_user}}`
+🔹 Resolve Dispute (Admin)
 
-```json
-{
-  "orderId": 101,
-  "reason": "Barang rusak"
-}
-```
+PATCH /admin/disputes/:id/resolve
 
----
+🧪 POSTMAN COLLECTION (REKOMENDASI)
 
-## 2️⃣2️⃣ ADMIN RESOLVE DISPUTE
+Folder:
 
-**PATCH** `/admin/disputes/1/resolve`
+Auth
+UMKM
+Products
+Public
+Cart
+Checkout
+Orders
+Wallet
+Admin
+Midtrans
+Upload
 
-Authorization → `{{token_admin}}`
+Gunakan Environment Variable:
 
-```json
-{
-  "decision": "REFUND"
-}
-```
+BASE_URL
+TOKEN
 
----
+🧾 CATATAN PENTING
+
+Semua image disimpan di Supabase
+
+Semua data di PostgreSQL lokal
+
+Backend tidak diubah
+
+Cloudflare Tunnel hanya jembatan HTTPS
+
+Siap demo / testing / MVP
+
+✅ STATUS AKHIR
+
+✔ Auth
+✔ Role
+✔ Upload image
+✔ Product
+✔ Checkout
+✔ Midtrans
+✔ Wallet
+✔ Admin
+✔ Public API
