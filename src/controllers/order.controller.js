@@ -4,6 +4,9 @@ import {
   wallets,
   walletTransactions,
   umkmProfiles,
+  products,
+  orderItems,
+  orderStatusLogs,
 } from "../config/schema.js";
 import { eq, and } from "drizzle-orm";
 
@@ -115,6 +118,7 @@ export const completeOrder = async (req, res, next) => {
   }
 };
 
+// 3. User Lihat History Pesanan
 export const getMyOrders = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -126,6 +130,156 @@ export const getMyOrders = async (req, res, next) => {
       .orderBy(orders.createdAt);
 
     res.json(data);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getOrderById = async (req, res, next) => {
+  try {
+    const orderId = Number(req.params.id);
+    const userId = req.user.id;
+
+    // 1. Ambil Order
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, orderId), eq(orders.userId, userId)));
+
+    if (!order) {
+      return res.status(404).json({ message: "Order tidak ditemukan" });
+    }
+
+    // 2. Ambil Store (UMKM)
+    const [store] = await db
+      .select({ name: umkmProfiles.storeName })
+      .from(umkmProfiles)
+      .where(eq(umkmProfiles.id, order.umkmId));
+
+    // 3. Ambil Items & Product info
+    const items = await db
+      .select({
+        name: products.name,
+        price: orderItems.price,
+        quantity: orderItems.quantity,
+      })
+      .from(orderItems)
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .where(eq(orderItems.orderId, orderId));
+
+    // 4. Cek Payment Method
+    // (Simplifikasi: cek table payments, atau ambil default logic)
+    // Disini kita return dummy atau ambil dari payment record jika ada
+    // Tapi user minta response simple, kita sesuaikan.
+
+    const response = {
+      id: order.id,
+      createdAt: order.createdAt,
+      store: {
+        name: store?.name || "UMKM Store",
+      },
+      items: items.map((item) => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      shippingCost: order.shippingCost || "0",
+      totalAmount: order.totalAmount,
+      paymentMethod: "QRIS / GOPAY", // Default for now
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.orderStatus,
+      receiverName: order.receiverName,
+      receiverPhone: order.receiverPhone,
+      shippingAddress: order.shippingAddress,
+    };
+
+    res.json(response);
+  } catch (err) {
+    next(err);
+  }
+};
+// ... existing code ...
+
+// 4. UMKM Lihat Pesanan Masuk
+export const getUmkmOrders = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // Cek UMKM
+    const [umkm] = await db
+      .select({ id: umkmProfiles.id })
+      .from(umkmProfiles)
+      .where(eq(umkmProfiles.userId, userId));
+
+    if (!umkm) {
+      return res.status(403).json({ message: "Bukan akun UMKM" });
+    }
+
+    const data = await db
+      .select({
+        id: orders.id,
+        userId: orders.userId,
+        totalAmount: orders.totalAmount,
+        orderStatus: orders.orderStatus,
+        paymentStatus: orders.paymentStatus,
+        createdAt: orders.createdAt,
+        receiverName: orders.receiverName,
+        trackingNumber: orders.trackingNumber,
+      })
+      .from(orders)
+      .where(eq(orders.umkmId, umkm.id))
+      .orderBy(orders.createdAt);
+
+    // Map to include placeholder buyerName if needed, or just return data
+    const formattedData = data.map(order => ({
+      ...order,
+      buyerName: "User"
+    }));
+
+    res.json(formattedData);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateOrderTracking = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const orderId = Number(req.params.id);
+    const { trackingNumber } = req.body;
+
+    if (!trackingNumber) {
+      return res.status(400).json({ message: "Nomor resi wajib diisi" });
+    }
+
+    // Cek UMKM User
+    const [umkm] = await db
+      .select()
+      .from(umkmProfiles)
+      .where(eq(umkmProfiles.userId, userId));
+
+    if (!umkm) return res.status(403).json({ message: "Akses ditolak" });
+
+    // Updates
+    const [updated] = await db
+      .update(orders)
+      .set({
+        trackingNumber,
+        orderStatus: "SHIPPED",
+      })
+      .where(and(eq(orders.id, orderId), eq(orders.umkmId, umkm.id)))
+      .returning();
+
+    if (!updated) return res.status(404).json({ message: "Order tidak ditemukan" });
+
+    // Log
+    await db.insert(orderStatusLogs).values({
+      orderId,
+      status: "SHIPPED",
+      note: `Resi diinput: ${trackingNumber}`,
+    });
+
+    res.json({ message: "Resi berhasil diinput", order: updated });
   } catch (err) {
     next(err);
   }

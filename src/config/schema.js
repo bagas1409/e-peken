@@ -8,6 +8,7 @@ import {
   numeric,
   varchar,
   jsonb,
+  index,
 } from "drizzle-orm/pg-core";
 
 /* =========================
@@ -22,6 +23,15 @@ export const users = pgTable("users", {
 
   status: text("status").default("ACTIVE"), // ACTIVE | BANNED
   createdAt: timestamp("created_at").defaultNow(),
+
+  // Shipping Profile (Nullable)
+  receiverName: text("receiver_name"),
+  receiverPhone: text("receiver_phone"),
+  defaultAddress: text("default_address"),
+  avatarUrl: text("avatar_url"),
+
+  isOnline: boolean("is_online").default(false),
+  lastSeen: timestamp("last_seen"),
 });
 
 export const roles = pgTable("roles", {
@@ -163,6 +173,12 @@ export const orders = pgTable("orders", {
   orderStatus: text("order_status").default("PENDING"),
   paymentStatus: text("payment_status").default("UNPAID"),
   createdAt: timestamp("created_at").defaultNow(),
+
+  // Shipping Info Snapshot (Nullable for backward compat, but required for new orders via API logic)
+  receiverName: text("receiver_name"),
+  receiverPhone: text("receiver_phone"),
+  shippingAddress: text("shipping_address"),
+  trackingNumber: text("tracking_number"),
 });
 
 export const orderItems = pgTable("order_items", {
@@ -265,17 +281,21 @@ export const chats = pgTable("chats", {
   umkmId: integer("umkm_id")
     .references(() => umkmProfiles.id)
     .notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index("chats_user_id_idx").on(table.userId),
+    umkmIdIdx: index("chats_umkm_id_idx").on(table.umkmId),
+  };
 });
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
-  chatId: integer("chat_id")
-    .references(() => chats.id)
-    .notNull(),
-  senderId: integer("sender_id")
-    .references(() => users.id)
-    .notNull(),
-  message: text("message").notNull(),
+  chatId: integer("chat_id").references(() => chats.id).notNull(),
+  senderId: integer("sender_id").references(() => users.id).notNull(),
+  message: text("message"), // Bisa null jika cuma kirim gambar
+  attachmentUrl: text("attachment_url"), // URL Gambar/File
+  messageType: text("message_type").default('TEXT'), // TEXT, IMAGE, FILE
+  isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -307,5 +327,12 @@ export const auditLogs = pgTable("audit_logs", {
   action: text("action").notNull(),
   target: text("target"),
   metadata: jsonb("metadata"), // ✅ FIX
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const wishlist = pgTable("wishlist", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -9,6 +9,7 @@ import {
   getAllOrders,
   getOrderDetail,
   getAuditLogs,
+  updateUserRole,
 } from "../controllers/admin.controller.js";
 import {
   getOpenDisputes,
@@ -48,6 +49,13 @@ router.patch(
   authMiddleware,
   roleMiddleware(["ADMIN"]),
   unbanUser
+);
+
+router.patch(
+  "/users/:id/role",
+  authMiddleware,
+  roleMiddleware(["ADMIN"]),
+  updateUserRole
 );
 
 router.get("/orders", authMiddleware, roleMiddleware(["ADMIN"]), getAllOrders);

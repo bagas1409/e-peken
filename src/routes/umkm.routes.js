@@ -3,6 +3,9 @@ import {
   createUmkmProfile,
   getMyWallet,
   getWalletTransactions,
+  updateUmkmProfile,
+  requestWithdraw,
+  getUmkmProfile
 } from "../controllers/umkm.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { roleMiddleware } from "../middlewares/role.middleware.js";
@@ -10,10 +13,25 @@ import { roleMiddleware } from "../middlewares/role.middleware.js";
 const router = express.Router();
 
 router.post(
-  "/profile",
+  "/withdraw",
   authMiddleware,
   roleMiddleware(["UMKM"]),
-  createUmkmProfile
+  requestWithdraw
+);
+
+router.post(
+  "/profile",
+  authMiddleware,
+  roleMiddleware(["USER", "UMKM"]),
+  createUmkmProfile,
+  getUmkmProfile
+);
+
+router.get(
+  "/profile",
+  authMiddleware,
+  roleMiddleware(["USER", "UMKM"]),
+  getUmkmProfile
 );
 
 router.get("/wallet", authMiddleware, roleMiddleware(["UMKM"]), getMyWallet);
@@ -23,6 +41,13 @@ router.get(
   authMiddleware,
   roleMiddleware(["UMKM"]),
   getWalletTransactions
+);
+
+router.patch(
+  "/profile",
+  authMiddleware,
+  roleMiddleware(["UMKM"]),
+  updateUmkmProfile
 );
 
 export default router;

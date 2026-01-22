@@ -209,6 +209,54 @@ export const banUser = async (req, res, next) => {
   }
 };
 
+export const updateUserRole = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const userId = Number(req.params.id);
+    const { role } = req.body; // Expect "USER" or "UMKM" or "ADMIN"
+
+    // Cari ID Role berdasarkan nama
+    const [roleData] = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, role));
+
+    if (!roleData) {
+      return res.status(400).json({ message: "Role tidak valid" });
+    }
+
+    // Update di tabel user_roles
+    // Cek dulu apakah user_roles sudah ada entry buat user ini?
+    const [existingRole] = await db
+      .select()
+      .from(userRoles)
+      .where(eq(userRoles.userId, userId));
+
+    if (existingRole) {
+      await db
+        .update(userRoles)
+        .set({ roleId: roleData.id })
+        .where(eq(userRoles.userId, userId));
+    } else {
+      await db.insert(userRoles).values({
+        userId,
+        roleId: roleData.id,
+      });
+    }
+
+    await logAdminAction({
+      adminId,
+      action: "UPDATE_ROLE",
+      target: `user:${userId}`,
+      metadata: { newRole: role },
+    });
+
+    res.json({ message: `Role user berhasil diubah menjadi ${role}` });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getAuditLogs = async (req, res, next) => {
   try {
     const logs = await db

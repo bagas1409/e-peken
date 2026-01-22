@@ -17,6 +17,8 @@ import paymentRoutes from "./routes/payment.routes.js";
 import midtransRoutes from "./routes/midtrans.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import healthRoutes from "./routes/health.routes.js";
+import wishlistRoutes from "./routes/wishlist.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
 
 import { generalLimiter } from "./middlewares/rateLimit.middleware.js";
 
@@ -63,6 +65,8 @@ app.use("/disputes", disputeRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/midtrans", midtransRoutes);
 app.use("/upload", uploadRoutes);
+app.use("/wishlist", wishlistRoutes);
+app.use("/chats", chatRoutes);
 
 /* ❌ 404 HANDLER (PALING BAWAH) */
 app.use((req, res) => {

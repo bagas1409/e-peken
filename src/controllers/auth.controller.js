@@ -33,6 +33,10 @@ export const register = async (req, res, next) => {
   try {
     const { name, email, password, role = "USER" } = req.body;
 
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Nama, Email, dan Password wajib diisi" });
+    }
+
     // cek user sudah ada
     const existing = await db
       .select()
@@ -93,8 +97,14 @@ export const login = async (req, res, next) => {
         name: users.name,
         email: users.email,
         password: users.password,
+        password: users.password,
         status: users.status,
         role: roles.name,
+        receiverName: users.receiverName,
+        receiverName: users.receiverName,
+        receiverPhone: users.receiverPhone,
+        defaultAddress: users.defaultAddress,
+        avatarUrl: users.avatarUrl,
       })
       .from(users)
       .leftJoin(userRoles, eq(users.id, userRoles.userId))
@@ -138,6 +148,11 @@ export const login = async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        receiverName: user.receiverName,
+        receiverPhone: user.receiverPhone,
+        receiverPhone: user.receiverPhone,
+        defaultAddress: user.defaultAddress,
+        avatarUrl: user.avatarUrl,
       },
     });
   } catch (err) {

@@ -80,7 +80,15 @@ export const updateProduct = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const productId = Number(req.params.id);
-    const { name, description, price, stock } = req.body;
+
+    const {
+      name,
+      description,
+      price,
+      stock,
+      imageUrl,
+      categoryId, // ✅ Fix: Add categoryId
+    } = req.body;
 
     const [umkm] = await db
       .select()
@@ -91,9 +99,26 @@ export const updateProduct = async (req, res, next) => {
       return res.status(404).json({ message: "UMKM tidak ditemukan" });
     }
 
+    // 🔑 KUMPULKAN FIELD YANG VALID SAJA
+    const updateData = {};
+
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (price !== undefined) updateData.price = price;
+    if (stock !== undefined) updateData.stock = stock;
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+    if (categoryId !== undefined) updateData.categoryId = categoryId; // ✅ Fix: Add to updateData
+
+    // 🚨 GUARD (WAJIB)
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        message: "Tidak ada data untuk diupdate",
+      });
+    }
+
     const [updated] = await db
       .update(products)
-      .set({ name, description, price, stock })
+      .set(updateData)
       .where(and(eq(products.id, productId), eq(products.umkmId, umkm.id)))
       .returning();
 

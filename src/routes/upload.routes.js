@@ -3,6 +3,7 @@ import {
   uploadProductImage,
   uploadUmkmLogo,
   uploadUmkmBanner,
+  uploadChatImage,
 } from "../controllers/upload.controller.js";
 import { upload } from "../middlewares/upload.middleware.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
@@ -32,6 +33,13 @@ router.post(
   roleMiddleware(["UMKM"]),
   upload.single("image"),
   uploadUmkmBanner
+);
+
+router.post(
+  "/chat-image",
+  authMiddleware,
+  upload.single("image"),
+  uploadChatImage
 );
 
 export default router;

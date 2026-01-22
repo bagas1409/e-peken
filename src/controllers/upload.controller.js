@@ -118,3 +118,31 @@ export const uploadUmkmBanner = async (req, res, next) => {
     next(err);
   }
 };
+/* ======================
+   UPLOAD CHAT IMAGE
+====================== */
+export const uploadChatImage = async (req, res, next) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: "File tidak ada" });
+    }
+
+    const ext = file.originalname.split(".").pop();
+    const path = `${uuid()}.${ext}`;
+
+    await supabase.storage.from("chats").upload(path, file.buffer, {
+      contentType: file.mimetype,
+    });
+
+    const { data } = supabase.storage.from("chats").getPublicUrl(path);
+
+    res.json({
+      message: "Gambar berhasil diupload",
+      imageUrl: data.publicUrl,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
