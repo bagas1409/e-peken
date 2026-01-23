@@ -22,7 +22,7 @@ router.post(
 router.post(
   "/profile",
   authMiddleware,
-  roleMiddleware(["USER", "UMKM"]),
+  roleMiddleware(["USER", "UMKM", "ADMIN"]),
   createUmkmProfile,
   getUmkmProfile
 );
@@ -30,7 +30,7 @@ router.post(
 router.get(
   "/profile",
   authMiddleware,
-  roleMiddleware(["USER", "UMKM"]),
+  roleMiddleware(["USER", "UMKM", "ADMIN"]),
   getUmkmProfile
 );
 
